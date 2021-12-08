@@ -1,7 +1,24 @@
 package ph.mcmod.bow_api;
 
-public final class ClientMain {
-public static void init(){
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
+import net.minecraft.client.item.ModelPredicateProviderRegistry;
+import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.util.Identifier;
+import ph.mcmod.bow_api.mixin.ModelPredicateProviderRegistryAccessor;
 
+@SuppressWarnings("ResultOfMethodCallIgnored")
+@Environment(EnvType.CLIENT)
+public final class ClientMain {
+public static void init() {
+	ModelPredicateProviderRegistryAccessor.invokeRegister(new Identifier("pulling"), (stack, world, entity, seed) -> entity != null && entity.isUsingItem() && entity.getActiveItem() == stack ? 1 : 0);
+	ModelPredicateProviderRegistryAccessor.invokeRegister(new Identifier("pull"), (stack, world, entity, seed) -> {
+		if (entity == null)
+			return 0;
+		if (entity.getActiveItem() != stack)
+			return 0;
+		int usingTicks = stack.getMaxUseTime() - entity.getItemUseTimeLeft();
+		return stack.getItem() instanceof RenderedAsBow customBow ? (float) customBow.calcPullProgress(stack, entity instanceof AbstractClientPlayerEntity player ? player : null, usingTicks) : 0;
+	});
 }
 }

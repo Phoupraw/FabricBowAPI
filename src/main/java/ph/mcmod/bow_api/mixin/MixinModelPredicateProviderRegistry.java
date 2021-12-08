@@ -60,8 +60,6 @@ public static @Nullable ModelPredicateProvider get(Item item, Identifier id) {
 		var provider = map.get(id);
 		if (provider != null)
 			return provider;
-	} else if (item instanceof RenderedAsBow) {
-		return ITEM_SPECIFIC.get(Items.BOW).get(id);
 	}
 	return GLOBAL.get(id);
 }
