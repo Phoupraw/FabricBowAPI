@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "bow_api",
+  "version": "${version}",
+  "name": "Bow API",
+  "description": "",
+  "authors": [
+    "Phoupraw"
+  ],
+  "contact": {
+    "homepage": "https://www.mcmod.cn/class/4191.html",
+    "issues": "https://www.mcmod.cn/class/4191.html"
+  },
+  "license": "CC0-1.0",
+  "icon": "assets/bow_api/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "ph.mcmod.bow_api.Main::init"
+    ],
+    "client": [
+      "ph.mcmod.bow_api.ClientMain::init"
+    ]
+  },
+  "mixins": [
+    "bow_api.mixins.json"
+  ],
+  "accessWidener": "accessWidener.txt",
+  "depends": {
+    "fabricloader": ">=0.11.3",
+    "fabric": ">=0.38.2",
+    "minecraft": ">=1.17",
+    "advanced_runtime_resource_pack": ">=0.4.4"
+  },
+  "custom": {
+
+  }
+}
