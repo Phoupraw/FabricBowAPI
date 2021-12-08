@@ -46,30 +46,30 @@ private AbstractClientPlayerEntity player;
 /**
  * 捕获的局部变量
  */
-private ItemStack bow;
+private ItemStack bowItem;
 
 /**
  * 捕获局部变量
  *
  * @see #player
- * @see #bow
+ * @see #bowItem
  * @see #onV(float)
  */
 @Inject(method = "renderFirstPersonItem", at = @At("HEAD"))
 private void onRenderFirstPersonItem(AbstractClientPlayerEntity player, float tickDelta, float pitch, Hand hand, float swingProgress, ItemStack item, float equipProgress, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
 	this.player = player;
-	bow = item;
+	bowItem = item;
 }
 
 /**
  * @see #onRenderFirstPersonItem(AbstractClientPlayerEntity, float, float, Hand, float, ItemStack, float, MatrixStack, VertexConsumerProvider, int, CallbackInfo)
  * @see RenderedAsBow
  */
-@ModifyVariable(method = "renderFirstPersonItem", index = 16, at = @At(value = "STORE", ordinal = 3))
+@ModifyVariable(method = "renderFirstPersonItem", index = 16, at = @At(value = "STORE", ordinal = 3,shift = At.Shift.AFTER))
 private float onV(float v) {
-	if (!(bow.getItem() instanceof RenderedAsBow renderedAsBow))
+	if (!(bowItem.getItem() instanceof RenderedAsBow renderedAsBow))
 		return v;
-	return (float) renderedAsBow.calcPullProgress(bow, player, bow.getMaxUseTime() - player.getItemUseTimeLeft());
+	return (float) renderedAsBow.calcPullProgress(bowItem, player, bowItem.getMaxUseTime() - player.getItemUseTimeLeft());
 }
 
 }

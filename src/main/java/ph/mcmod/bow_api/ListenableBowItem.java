@@ -135,7 +135,7 @@ public boolean isArrowUnrecyclable() {
  * @return 如果大于1，则箭会暴击；如果是{@link Double#NaN}，则视为拉弓失败，箭不会射出
  */
 public double calcPullProgress(ItemStack bowStack, ItemStack arrowStack, LivingEntity user, int usingTicks) {
-	return getPullProgress(usingTicks) * getPullSpeed();
+	return getPullProgress((int) (usingTicks * getPullSpeed()));
 }
 
 /**
@@ -143,7 +143,7 @@ public double calcPullProgress(ItemStack bowStack, ItemStack arrowStack, LivingE
  */
 @Override
 public double calcPullProgress(ItemStack bow, AbstractClientPlayerEntity player, int usingTicks) {
-	return RenderedAsBow.super.calcPullProgress(bow, player, usingTicks) * getPullSpeed();
+	return RenderedAsBow.super.calcPullProgress(bow, player, (int) (usingTicks * getPullSpeed()));
 }
 
 /**

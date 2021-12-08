@@ -36,17 +36,17 @@ private ItemStack arrowStack;
 @ModifyVariable(method = "tick", index = 6, at = @At(value = "STORE", ordinal = 0))
 private int onI(int i) {
 	bowStack = actor.getActiveItem();
-	if (!(bowStack.getItem() instanceof CalcPullProgress customBowItem))
+	if (!(bowStack.getItem() instanceof CalcPullProgress bowItem))
 		return i;
 	arrowStack = actor.getArrowType(bowStack);
-	return (int)(20 * customBowItem.calcPullProgress(bowStack, arrowStack , actor, actor.getItemUseTime()));
+	return (int)(20 * bowItem.calcPullProgress(bowStack, arrowStack , actor, actor.getItemUseTime()));
 }
 
 @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/BowItem;getPullProgress(I)F"))
-private float on(int usingTicks) {
-	if (!(bowStack.getItem() instanceof CalcPullProgress customBowItem))
+private float onGetPullProgress(int usingTicks) {
+	if (!(bowStack.getItem() instanceof CalcPullProgress bowItem))
 		return BowItem.getPullProgress(usingTicks);
-	return (float) customBowItem.calcPullProgress(bowStack, arrowStack, actor, usingTicks);
+	return (float) bowItem.calcPullProgress(bowStack, arrowStack, actor, usingTicks);
 }
 }
 
