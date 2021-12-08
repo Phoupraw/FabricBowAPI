@@ -65,7 +65,7 @@ private void onRenderFirstPersonItem(AbstractClientPlayerEntity player, float ti
  * @see #onRenderFirstPersonItem(AbstractClientPlayerEntity, float, float, Hand, float, ItemStack, float, MatrixStack, VertexConsumerProvider, int, CallbackInfo)
  * @see RenderedAsBow
  */
-@ModifyVariable(method = "renderFirstPersonItem", index = 16, at = @At(value = "STORE", ordinal = 3,shift = At.Shift.AFTER))
+@ModifyVariable(method = "renderFirstPersonItem", index = 16, at = @At(value = "STORE", ordinal = 3))
 private float onV(float v) {
 	if (!(bowItem.getItem() instanceof RenderedAsBow renderedAsBow))
 		return v;
