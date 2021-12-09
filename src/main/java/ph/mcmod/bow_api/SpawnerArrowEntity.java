@@ -45,7 +45,7 @@ public void writeCustomDataToNbt(NbtCompound nbt) {
 public void readCustomDataFromNbt(NbtCompound nbt) {
 	super.readCustomDataFromNbt(nbt);
 	entities.clear();
-	entities.addAll(nbt.getList(KEY, NbtElement.STRING_TYPE).stream().map(nbtElement -> Registry.ENTITY_TYPE.get(new Identifier(nbtElement.toString()))).toList());
+	entities.addAll(nbt.getList(KEY, NbtElement.STRING_TYPE).stream().map(nbtElement -> Registry.ENTITY_TYPE.get(new Identifier(nbtElement.asString()))).toList());
 }
 
 }
