@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
-import ph.mcmod.bow_api.ListenableBowItem;
+import ph.mcmod.bow_api.SimpleBowItem;
 
 @Mixin(AbstractSkeletonEntity.class)
 public abstract class MixinAbstractSkeletonEntity extends HostileEntity {
@@ -69,24 +69,24 @@ public boolean canUseRangedWeapon(RangedWeaponItem weapon) {
 }
 
 /**
- * 如果是{@link ListenableBowItem}，那就不发声，而是在{@link ListenableBowItem#onStoppedUsing(ItemStack, World, LivingEntity, int)}里发声。
+ * 如果是{@link SimpleBowItem}，那就不发声，而是在{@link SimpleBowItem#onStoppedUsing(ItemStack, World, LivingEntity, int)}里发声。
  */
 @Redirect(method = "attack", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/mob/AbstractSkeletonEntity;playSound(Lnet/minecraft/sound/SoundEvent;FF)V"))
 private void on2(AbstractSkeletonEntity skeleton, SoundEvent soundEvent, float volume, float pitch) {
 	ItemStack bowStack = getStackInHand(ProjectileUtil.getHandPossiblyHolding(this, Items.BOW));
-	if (!(bowStack.getItem() instanceof ListenableBowItem)) {
+	if (!(bowStack.getItem() instanceof SimpleBowItem)) {
 		skeleton.playSound(soundEvent, volume, pitch);
 	}
 }
 
 /**
- * 如果是{@link ListenableBowItem}，那就调用{@link BowItem#onStoppedUsing(ItemStack, World, LivingEntity, int)}来射箭。
+ * 如果是{@link SimpleBowItem}，那就调用{@link BowItem#onStoppedUsing(ItemStack, World, LivingEntity, int)}来射箭。
  */
 @Redirect(method = "attack", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/World;spawnEntity(Lnet/minecraft/entity/Entity;)Z"))
 private boolean on(World world, Entity entity) {
 	ItemStack bowStack = getStackInHand(ProjectileUtil.getHandPossiblyHolding(this, Items.BOW));
 	Item bowItem = bowStack.getItem();
-	if (bowItem instanceof ListenableBowItem) {
+	if (bowItem instanceof SimpleBowItem) {
 		bowItem.onStoppedUsing(bowStack, world, this, bowItem.getMaxUseTime(bowStack) - 20);
 		return false;
 	} else {

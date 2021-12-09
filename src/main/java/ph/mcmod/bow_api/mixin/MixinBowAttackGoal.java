@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import ph.mcmod.bow_api.CalcPullProgress;
+import ph.mcmod.bow_api.SimpleBowItem;
 
 @Mixin(BowAttackGoal.class)
 public abstract class MixinBowAttackGoal<T extends HostileEntity & RangedAttackMob> extends Goal {
@@ -23,7 +24,7 @@ private T actor;
 
 /**
  * @author Phoupraw
- * @reason 让骷髅手持 {@link ph.mcmod.bow_api.ListenableBowItem}也能射箭。
+ * @reason 让骷髅手持 {@link SimpleBowItem}也能射箭。
  */
 @Overwrite
 public boolean isHoldingBow() {
@@ -39,14 +40,14 @@ private int onI(int i) {
 	if (!(bowStack.getItem() instanceof CalcPullProgress bowItem))
 		return i;
 	arrowStack = actor.getArrowType(bowStack);
-	return (int)(20 * bowItem.calcPullProgress(bowStack, arrowStack , actor, actor.getItemUseTime()));
+	return (int) (20 * bowItem.calcPullProgress(actor.world, actor, bowStack, arrowStack, actor.getItemUseTime()));
 }
 
 @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/BowItem;getPullProgress(I)F"))
 private float onGetPullProgress(int usingTicks) {
 	if (!(bowStack.getItem() instanceof CalcPullProgress bowItem))
 		return BowItem.getPullProgress(usingTicks);
-	return (float) bowItem.calcPullProgress(bowStack, arrowStack, actor, usingTicks);
+	return (float) bowItem.calcPullProgress(actor.world, actor, bowStack, arrowStack, usingTicks);
 }
 }
 

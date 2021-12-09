@@ -5,7 +5,9 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.mob.SkeletonEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
@@ -15,15 +17,17 @@ import net.minecraft.item.BowItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
+import org.spongepowered.asm.mixin.Overwrite;
 import ph.mcmod.bow_api.mixin.PersistentProjectileEntityAccessor;
 
 
-public class ListenableBowItem extends BowItem implements RenderedAsBow, CalcPullProgress {
+public class SimpleBowItem extends BowItem implements RenderedAsBow, CalcPullProgress {
 protected final double damageAddend;
 protected final double damageFactor;
 protected final double pullSpeed;
@@ -31,7 +35,7 @@ protected final double velocityAddend;
 protected final double velocityFactor;
 protected final boolean arrowUnrecyclable;
 
-public ListenableBowItem(@NotNull BowSettings settings) {
+public SimpleBowItem(@NotNull BowSettings settings) {
 	super(settings);
 	damageAddend = settings.getDamageAddend();
 	damageFactor = settings.getDamageFactor();
@@ -49,38 +53,40 @@ public void onStoppedUsing(@NotNull ItemStack bowStack, @NotNull World world, @N
 	ItemStack arrowStack = calcArrowStack(bowStack, world, user, usingTicks);
 	if (arrowStack.isEmpty())
 		return;
-	double pullProgress = calcPullProgress(bowStack, arrowStack, user, usingTicks);
+	double pullProgress = calcPullProgress(world, user, bowStack, arrowStack, usingTicks);
 	if (Double.isNaN(pullProgress))
 		return;
-	var arrow = calcArrowEntity(bowStack, arrowStack, world, user, pullProgress);
-	arrow.setProperties(user, user.getPitch(), user.getYaw(), 0.0F, (float) (pullProgress * 3), 1);
-	arrow.setDamage(arrow.getDamage() + getDamageAddend());
-	arrow.setVelocity(arrow.getVelocity().add(arrow.getVelocity().normalize().multiply(pullProgress * getVelocityAddend())));
+	var arrowEntity = calcArrowEntity(world, user, bowStack, arrowStack, pullProgress);
+	arrowEntity.setProperties(user, user.getPitch(), user.getYaw(), 0.0F, (float) (pullProgress * 3), 1);
+	arrowEntity.setDamage(arrowEntity.getDamage() + getDamageAddend());
+	arrowEntity.setVelocity(arrowEntity.getVelocity().add(arrowEntity.getVelocity().normalize().multiply(pullProgress * getVelocityAddend())));
 	if (pullProgress >= 1)
-		arrow.setCritical(true);
+		arrowEntity.setCritical(true);
 	int power = EnchantmentHelper.getLevel(Enchantments.POWER, bowStack);
 	if (power > 0)
-		arrow.setDamage(arrow.getDamage() + power * 0.5 + 0.5);
+		arrowEntity.setDamage(arrowEntity.getDamage() + power * 0.5 + 0.5);
 	int punch = EnchantmentHelper.getLevel(Enchantments.PUNCH, bowStack);
 	if (punch > 0)
-		arrow.setPunch(punch);
+		arrowEntity.setPunch(punch);
 	int flame = EnchantmentHelper.getLevel(Enchantments.FLAME, bowStack);
 	if (flame > 0)
-		arrow.setOnFireFor(100 * flame);
+		arrowEntity.setOnFireFor(100 * flame);
 	bowStack.damage(1, user, living -> living.sendToolBreakStatus(user.getActiveHand()));
 	if (user instanceof PlayerEntity player) {
 		player.incrementStat(Stats.USED.getOrCreateStat(this));
-		if (calcInfinity(bowStack, arrowStack, world, player, pullProgress))
-			arrow.pickupType = PersistentProjectileEntity.PickupPermission.CREATIVE_ONLY;
+		if (calcInfinity(world, player, bowStack, arrowStack, pullProgress) > world.random.nextDouble())
+			arrowEntity.pickupType = PersistentProjectileEntity.PickupPermission.CREATIVE_ONLY;
 		else
 			arrowStack.decrement(1);
+	} else {
+		arrowEntity.pickupType = PersistentProjectileEntity.PickupPermission.DISALLOWED;
 	}
-	arrow.setDamage(arrow.getDamage() * getDamageFactor());
-	arrow.setVelocity(arrow.getVelocity().multiply(getVelocityFactor()));
+	arrowEntity.setDamage(arrowEntity.getDamage() * getDamageFactor());
+	arrowEntity.setVelocity(arrowEntity.getVelocity().multiply(getVelocityFactor()));
 	if (isArrowUnrecyclable())
-		((PersistentProjectileEntityAccessor) arrow).setLife(Integer.MAX_VALUE);
-	world.spawnEntity(arrow);
-	world.playSound(null, user.getX(), user.getY(), user.getZ(), SoundEvents.ENTITY_ARROW_SHOOT, SoundCategory.PLAYERS, 1.0F, (float) (1.0F / (world.getRandom().nextFloat() * 0.4F + 1.2F) + pullProgress * 0.5F));
+		((PersistentProjectileEntityAccessor) arrowEntity).setLife(Integer.MAX_VALUE);
+	world.spawnEntity(arrowEntity);
+	playSoundOnShoot(world, user, bowStack, arrowStack, arrowEntity, pullProgress);
 }
 
 /**
@@ -132,9 +138,10 @@ public boolean isArrowUnrecyclable() {
  * @param arrowStack 箭
  * @param user       拉弓的生物
  * @param usingTicks 已经拉了多久的弓，单位是游戏刻
- * @return 如果大于1，则箭会暴击；如果是{@link Double#NaN}，则视为拉弓失败，箭不会射出
+ * @return 如果大于1，则箭会暴击；如果是{@link Double#NaN}，则视为拉弓失败，箭不会射出；可以大于1，会反映在箭的速度和伤害等属性
  */
-public double calcPullProgress(ItemStack bowStack, ItemStack arrowStack, LivingEntity user, int usingTicks) {
+@Override
+public double calcPullProgress(World world, LivingEntity user, ItemStack bowStack, ItemStack arrowStack, int usingTicks) {
 	return getPullProgress((int) (usingTicks * getPullSpeed()));
 }
 
@@ -142,23 +149,23 @@ public double calcPullProgress(ItemStack bowStack, ItemStack arrowStack, LivingE
  * 乘以了{@link #getPullSpeed()}
  */
 @Override
-public double calcPullProgress(ItemStack bow, AbstractClientPlayerEntity player, int usingTicks) {
-	return RenderedAsBow.super.calcPullProgress(bow, player, (int) (usingTicks * getPullSpeed()));
+public double calcPullProgress(AbstractClientPlayerEntity player, @NotNull ItemStack bow, int usingTicks) {
+	return RenderedAsBow.super.calcPullProgress(player,bow,  (int) (usingTicks * getPullSpeed()));
 }
 
 /**
- * 计算是否无限
+ * 计算无限的概率，即箭不消耗的概率，在这种情况下，{@code arrowStack}不会消耗，且射出的箭实体的{@link PersistentProjectileEntity#pickupType}会被设为{@link PersistentProjectileEntity.PickupPermission#CREATIVE_ONLY}
  *
  * @param bowStack     弓
  * @param arrowStack   箭
  * @param world        玩家所处的世界
  * @param player       玩家
- * @param pullProgress 拉弓进度，见{@link #calcPullProgress(ItemStack, ItemStack, LivingEntity, int)}
- * @return 如果为 {@code true}，则箭{@code arrowStack}不会消耗
+ * @param pullProgress 拉弓进度，见{@link #calcPullProgress(World, LivingEntity, ItemStack, ItemStack, int)}
+ * @return 概率
  */
 @SuppressWarnings("unused")
-public boolean calcInfinity(ItemStack bowStack, ItemStack arrowStack, World world, PlayerEntity player, double pullProgress) {
-	return player.isCreative() || EnchantmentHelper.getLevel(Enchantments.INFINITY, bowStack) >= 1 && arrowStack.isOf(Items.ARROW);
+public double calcInfinity(World world, PlayerEntity player, ItemStack bowStack, ItemStack arrowStack, double pullProgress) {
+	return player.isCreative() || EnchantmentHelper.getLevel(Enchantments.INFINITY, bowStack) >= 1 && arrowStack.isOf(Items.ARROW) ? 1 : 0;
 }
 
 /**
@@ -194,13 +201,35 @@ public ItemStack calcArrowStack(ItemStack bowStack, World world, LivingEntity us
  * @param arrowStack   箭
  * @param world        世界
  * @param user         射箭的生物
- * @param pullProgress 拉弓进度，见{@link #calcPullProgress(ItemStack, ItemStack, LivingEntity, int)}
+ * @param pullProgress 拉弓进度，见{@link #calcPullProgress(World, LivingEntity, ItemStack, ItemStack, int)}
  * @return 要生成的箭实体
  */
 @SuppressWarnings("unused")
-public PersistentProjectileEntity calcArrowEntity(ItemStack bowStack, ItemStack arrowStack, World world, LivingEntity user, double pullProgress) {
+public PersistentProjectileEntity calcArrowEntity(World world, LivingEntity user, ItemStack bowStack, ItemStack arrowStack, double pullProgress) {
 	ArrowItem arrowItem = arrowStack.getItem() instanceof ArrowItem a ? a : (ArrowItem) Items.ARROW;
 	return arrowItem.createArrow(world, arrowStack, user);
+}
+
+/**
+ * 在射箭的最后播放音效
+ *
+ * @param world        世界
+ * @param user         射箭者
+ * @param bowStack     弓
+ * @param arrowStack   箭
+ * @param arrowEntity  射出去的箭实体，此时已经调用了{@link World#spawnEntity(Entity)}
+ * @param pullProgress 拉弓进度，可能大于1
+ */
+public void playSoundOnShoot(World world, LivingEntity user, ItemStack bowStack, ItemStack arrowStack, PersistentProjectileEntity arrowEntity, double pullProgress) {
+	SoundEvent sound = SoundEvents.ENTITY_ARROW_SHOOT;
+	SoundCategory category = SoundCategory.AMBIENT;
+	if (user instanceof SkeletonEntity) {
+		sound = SoundEvents.ENTITY_SKELETON_SHOOT;
+		category = SoundCategory.HOSTILE;
+	} else if (user instanceof PlayerEntity) {
+		category = SoundCategory.PLAYERS;
+	}
+	world.playSound(null, user.getX(), user.getY(), user.getZ(), sound, category, 1.0F, (float) (1.0F / (world.getRandom().nextFloat() * 0.4F + 1.2F) + pullProgress * 0.5F));
 }
 
 @Override

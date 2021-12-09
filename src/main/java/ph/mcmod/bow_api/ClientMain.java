@@ -8,7 +8,6 @@ import net.minecraft.item.Items;
 import net.minecraft.util.Identifier;
 import ph.mcmod.bow_api.mixin.ModelPredicateProviderRegistryAccessor;
 
-@SuppressWarnings("ResultOfMethodCallIgnored")
 @Environment(EnvType.CLIENT)
 public final class ClientMain {
 public static void init() {
@@ -19,8 +18,7 @@ public static void init() {
 		if (entity.getActiveItem() != stack)
 			return 0;
 		int usingTicks = stack.getMaxUseTime() - entity.getItemUseTimeLeft();
-		return stack.getItem() instanceof RenderedAsBow customBow ? (float) customBow.calcPullProgress(stack, entity instanceof AbstractClientPlayerEntity player ? player : null, usingTicks) : 0;
+		return stack.getItem() instanceof RenderedAsBow customBow ? (float) customBow.calcPullProgress( entity instanceof AbstractClientPlayerEntity player ? player : null,stack, usingTicks) : 0;
 	});
-
 }
 }

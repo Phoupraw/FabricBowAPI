@@ -10,12 +10,13 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Rarity;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * 用于设置弓箭的简单属性
  *
- * @see ListenableBowItem#ListenableBowItem(BowSettings)
+ * @see SimpleBowItem#SimpleBowItem(BowSettings)
  */
 public class BowSettings extends FabricItemSettings {
 private double damageAddend = 2;
@@ -44,7 +45,7 @@ public BowSettings setDamageFactor(double damageFactor) {
 }
 
 /**
- * 将计算出的拉弓进度{@link ListenableBowItem#calcPullProgress(ItemStack, ItemStack, LivingEntity, int)}乘这个
+ * 将计算出的拉弓进度{@link SimpleBowItem#calcPullProgress(World, LivingEntity, ItemStack, ItemStack, int)}乘这个
  *
  * @see #setPullTicks(int)
  */
@@ -55,7 +56,7 @@ public BowSettings setPullSpeed(double pullSpeed) {
 }
 
 /**
- * 将计算出的拉弓进度{@link ListenableBowItem#calcPullProgress(ItemStack, ItemStack, LivingEntity, int)}乘20除以这个
+ * 将计算出的拉弓进度{@link SimpleBowItem#calcPullProgress(World, LivingEntity, ItemStack, ItemStack, int)}乘20除以这个
  *
  * @see #setPullTicks(int)
  */
@@ -66,7 +67,7 @@ public BowSettings setPullTicks(int usingTicks) {
 }
 
 /**
- * 在最初，把箭的速度加上这个乘拉弓进度（见{@link ListenableBowItem#calcPullProgress(ItemStack, ItemStack, LivingEntity, int)}）
+ * 在最初，把箭的速度加上这个乘拉弓进度（见{@link SimpleBowItem#calcPullProgress(World, LivingEntity, ItemStack, ItemStack, int)}）
  */
 @NotNull
 public BowSettings setVelocityAddend(double velocityAddend) {

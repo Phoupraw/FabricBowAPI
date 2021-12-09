@@ -40,7 +40,7 @@ private boolean onIfIsOf(ItemStack itemStack, Item item) {
 private int onI(AbstractClientPlayerEntity player) {
 	if (!(getSpeed_itemStack.getItem() instanceof RenderedAsBow renderedAsBow))
 		return getItemUseTime();
-	return (int) (Math.sqrt(renderedAsBow.calcPullProgress(getSpeed_itemStack, player, getItemUseTime())) * 20);
+	return (int) (Math.sqrt(renderedAsBow.calcPullProgress(player,getSpeed_itemStack,  getItemUseTime())) * 20);
 }
 
 }

@@ -42,27 +42,29 @@ private static UnclampedModelPredicateProvider DAMAGED_PROVIDER;
 @Final
 private static Map<Identifier, ModelPredicateProvider> GLOBAL;
 
-///**
-// * @author Phoupraw
-// * @reason
-// */
-//@SuppressWarnings("deprecation")
-//@Overwrite
-//public static @Nullable ModelPredicateProvider get(Item item, Identifier id) {
-//	if (item.getMaxDamage() > 0) {
-//		if (DAMAGE_ID.equals(id))
-//			return DAMAGE_PROVIDER;
-//		if (DAMAGED_ID.equals(id))
-//			return DAMAGED_PROVIDER;
-//	}
-//	var map = ITEM_SPECIFIC.get(item);
-//	if (map != null) {
-//		var provider = map.get(id);
-//		if (provider != null)
-//			return provider;
-//	}
-//	return GLOBAL.get(id);
-//}
+/**
+ * @author Phoupraw
+ * @reason
+ */
+@SuppressWarnings("deprecation")
+@Overwrite
+public static @Nullable ModelPredicateProvider get(Item item, Identifier id) {
+	if (item.getMaxDamage() > 0) {
+		if (DAMAGE_ID.equals(id))
+			return DAMAGE_PROVIDER;
+		if (DAMAGED_ID.equals(id))
+			return DAMAGED_PROVIDER;
+	}
+	var map = ITEM_SPECIFIC.get(item);
+	if (map != null) {
+		var provider = map.get(id);
+		if (provider != null)
+			return provider;
+	} else if (item instanceof RenderedAsBow){
+		return ITEM_SPECIFIC.get(Items.BOW).get(id);
+	}
+	return GLOBAL.get(id);
+}
 ///**
 // * 让{@link CustomBowItem}的模型参数和{@link Items#BOW}相同：也传递{@code "pulling"}和{@code "pull"}参数。
 // */
