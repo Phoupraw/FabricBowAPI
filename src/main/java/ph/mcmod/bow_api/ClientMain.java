@@ -2,11 +2,15 @@ package ph.mcmod.bow_api;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.fabric.api.client.rendereregistry.v1.EntityRendererRegistry;
 import net.minecraft.client.item.ModelPredicateProviderRegistry;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
+import net.minecraft.client.render.entity.ArrowEntityRenderer;
 import net.minecraft.item.Items;
 import net.minecraft.util.Identifier;
 import ph.mcmod.bow_api.mixin.ModelPredicateProviderRegistryAccessor;
+
+import static ph.mcmod.bow_api.SpawnerArrowEntity.ENTITY_TYPE;
 
 @Environment(EnvType.CLIENT)
 public final class ClientMain {
@@ -20,5 +24,6 @@ public static void init() {
 		int usingTicks = stack.getMaxUseTime() - entity.getItemUseTimeLeft();
 		return stack.getItem() instanceof RenderedAsBow customBow ? (float) customBow.calcPullProgress( entity instanceof AbstractClientPlayerEntity player ? player : null,stack, usingTicks) : 0;
 	});
+	EntityRendererRegistry.INSTANCE.register(ENTITY_TYPE, ArrowEntityRenderer::new);
 }
 }

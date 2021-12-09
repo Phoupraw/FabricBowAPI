@@ -1,7 +1,5 @@
 package ph.mcmod.bow_api;
 
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
@@ -25,7 +23,6 @@ import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.spongepowered.asm.mixin.Overwrite;
 import ph.mcmod.bow_api.mixin.PersistentProjectileEntityAccessor;
 
 
@@ -35,7 +32,7 @@ protected final double damageFactor;
 protected final double pullSpeed;
 protected final double velocityAddend;
 protected final double velocityFactor;
-protected final boolean arrowUnrecyclable;
+protected final boolean arrowDiscard;
 @Nullable
 protected final EntityType<?> spawnOnHit;
 
@@ -46,7 +43,7 @@ public SimpleBowItem(@NotNull BowSettings settings) {
 	pullSpeed = settings.getPullSpeed();
 	velocityAddend = settings.getVelocityAddend();
 	velocityFactor = settings.getVelocityFactor();
-	arrowUnrecyclable = settings.isArrowUnrecyclable();
+	arrowDiscard = settings.isArrowDiscard();
 	spawnOnHit = settings.getSpawnOnHit();
 }
 
@@ -62,6 +59,8 @@ public void onStoppedUsing(@NotNull ItemStack bowStack, @NotNull World world, @N
 	if (Double.isNaN(pullProgress))
 		return;
 	var arrowEntity = calcArrowEntity(world, user, bowStack, arrowStack, pullProgress);
+	arrowEntity.setOwner(user);
+	arrowEntity.setPosition(user.getEyePos().add(0, -0.1, 0));
 	arrowEntity.setProperties(user, user.getPitch(), user.getYaw(), 0.0F, (float) (pullProgress * 3), 1);
 	arrowEntity.setDamage(arrowEntity.getDamage() + getDamageAddend());
 	arrowEntity.setVelocity(arrowEntity.getVelocity().add(arrowEntity.getVelocity().normalize().multiply(pullProgress * getVelocityAddend())));
@@ -88,8 +87,8 @@ public void onStoppedUsing(@NotNull ItemStack bowStack, @NotNull World world, @N
 	}
 	arrowEntity.setDamage(arrowEntity.getDamage() * getDamageFactor());
 	arrowEntity.setVelocity(arrowEntity.getVelocity().multiply(getVelocityFactor()));
-	if (isArrowUnrecyclable())
-		((PersistentProjectileEntityAccessor) arrowEntity).setLife(Integer.MAX_VALUE);
+	if (isArrowDiscard())
+		((PersistentProjectileEntityAccessor) arrowEntity).setLife(1200);
 	world.spawnEntity(arrowEntity);
 	playSoundOnShoot(world, user, bowStack, arrowStack, arrowEntity, pullProgress);
 }
@@ -130,10 +129,10 @@ public double getVelocityFactor() {
 }
 
 /**
- * @see BowSettings#setArrowUnrecyclable(boolean)
+ * @see BowSettings#setArrowDiscard(boolean)
  */
-public boolean isArrowUnrecyclable() {
-	return arrowUnrecyclable;
+public boolean isArrowDiscard() {
+	return arrowDiscard;
 }
 
 public @Nullable EntityType<?> getSpawnOnHit() {
@@ -159,7 +158,7 @@ public double calcPullProgress(World world, LivingEntity user, ItemStack bowStac
  */
 @Override
 public double calcPullProgress(AbstractClientPlayerEntity player, @NotNull ItemStack bow, int usingTicks) {
-	return RenderedAsBow.super.calcPullProgress(player,bow,  (int) (usingTicks * getPullSpeed()));
+	return RenderedAsBow.super.calcPullProgress(player, bow, (int) (usingTicks * getPullSpeed()));
 }
 
 /**
@@ -217,8 +216,10 @@ public ItemStack calcArrowStack(ItemStack bowStack, World world, LivingEntity us
 public PersistentProjectileEntity calcArrowEntity(World world, LivingEntity user, ItemStack bowStack, ItemStack arrowStack, double pullProgress) {
 	PersistentProjectileEntity r;
 	if (getSpawnOnHit() != null) {
-		r = new SpawnerArrowEntity(SpawnerArrowEntity.ENTITY_TYPE,world).add(getSpawnOnHit());
-	} else 	{
+		ArrowEntity arrowEntity = new SpawnerArrowEntity(world).add(getSpawnOnHit()).setDiscard();
+		arrowEntity.initFromStack(arrowStack);
+		r = arrowEntity;
+	} else {
 		ArrowItem arrowItem = arrowStack.getItem() instanceof ArrowItem a ? a : (ArrowItem) Items.ARROW;
 		r = arrowItem.createArrow(world, arrowStack, user);
 	}

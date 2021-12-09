@@ -12,4 +12,6 @@ int getLife();
 
 @Accessor
 void setLife(int value);
+
+
 }

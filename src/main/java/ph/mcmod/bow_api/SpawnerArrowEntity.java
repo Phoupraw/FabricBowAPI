@@ -1,41 +1,51 @@
 package ph.mcmod.bow_api;
 
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnGroup;
-import net.minecraft.entity.projectile.ArrowEntity;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtString;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
 
-import java.util.function.BiFunction;
-import java.util.function.Function;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
 
 public class SpawnerArrowEntity extends ListenableArrowEntity {
 public static final Identifier ID = new Identifier(Main.NAMESPACE, "spawner_arrow");
-public static final EntityType<SpawnerArrowEntity> ENTITY_TYPE = Registry.register(Registry.ENTITY_TYPE, ID, EntityType.Builder.create(SpawnerArrowEntity::new, SpawnGroup.MISC).setDimensions(0.5F, 0.5F).maxTrackingRange(4).trackingTickInterval(20).build(ID.toString()));
-public final LimitedCollection<BiFunction<SpawnerArrowEntity, HitResult, Entity>> entities = new LimitedLinkedLit<>();
+public static final EntityType<SpawnerArrowEntity> ENTITY_TYPE = Main.register(ID, SpawnerArrowEntity::new);
+public static final String KEY = "entities";
+public final List<EntityType<?>> entities = new LinkedList<>();
 
-public SpawnerArrowEntity(EntityType<? extends SpawnerArrowEntity> entityType, World world) {
+public SpawnerArrowEntity(World world) {
+	this(ENTITY_TYPE,world);
+}
+protected SpawnerArrowEntity(EntityType<? extends SpawnerArrowEntity> entityType, World world) {
 	super(entityType, world);
 	followingHit.add((this0, hitResult) -> {
-		for (var spawner : entities)
-			this0.world.spawnEntity(spawner.apply((SpawnerArrowEntity) this0, hitResult));
+		for (var type : entities)
+			this0.world.spawnEntity(type.create(this0.world));
 	});
 }
 
 public SpawnerArrowEntity add(EntityType<?> entityType) {
-	add(entityType::create);
+	entities.add(entityType);
 	return this;
 }
 
-public SpawnerArrowEntity add(Function<World, ? extends Entity> create) {
-	entities.add((spawnerArrowEntity, hitResult) -> {
-		var entity = create.apply(spawnerArrowEntity.world);
-		entity.setPosition(hitResult.getPos());
-		return entity;
-	});
-	return this;
+@Override
+public void writeCustomDataToNbt(NbtCompound nbt) {
+	super.writeCustomDataToNbt(nbt);
+	nbt.put(KEY, entities.stream().map(entry -> NbtString.of(Objects.toString(Registry.ENTITY_TYPE.getId(entry)))).collect(NbtList::new, NbtList::add, NbtList::addAll));
 }
+
+@Override
+public void readCustomDataFromNbt(NbtCompound nbt) {
+	super.readCustomDataFromNbt(nbt);
+	entities.clear();
+	entities.addAll(nbt.getList(KEY, NbtElement.STRING_TYPE).stream().map(nbtElement -> Registry.ENTITY_TYPE.get(new Identifier(nbtElement.toString()))).toList());
+}
+
 }

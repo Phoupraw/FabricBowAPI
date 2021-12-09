@@ -3,7 +3,6 @@ package ph.mcmod.bow_api;
 import net.fabricmc.fabric.api.item.v1.CustomDamageHandler;
 import net.fabricmc.fabric.api.item.v1.EquipmentSlotProvider;
 import net.fabricmc.fabric.api.item.v1.FabricItemSettings;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
@@ -26,7 +25,7 @@ private double damageFactor = 1;
 private double pullSpeed = 1;
 private double velocityAddend = 0;
 private double velocityFactor = 1;
-private boolean arrowUnrecyclable = false;
+private boolean arrowDiscard = false;
 private EntityType<?> spawnOnHit = null;
 
 /**
@@ -91,8 +90,8 @@ public BowSettings setVelocityFactor(double velocityFactor) {
  * 让箭在落地后立马消失
  */
 @NotNull
-public BowSettings setArrowUnrecyclable(boolean arrowUnrecyclable) {
-	this.arrowUnrecyclable = arrowUnrecyclable;
+public BowSettings setArrowDiscard(boolean arrowDiscard) {
+	this.arrowDiscard = arrowDiscard;
 	return this;
 }
 
@@ -121,8 +120,8 @@ public double getVelocityFactor() {
 	return velocityFactor;
 }
 
-public boolean isArrowUnrecyclable() {
-	return arrowUnrecyclable;
+public boolean isArrowDiscard() {
+	return arrowDiscard;
 }
 
 public EntityType<?> getSpawnOnHit() {

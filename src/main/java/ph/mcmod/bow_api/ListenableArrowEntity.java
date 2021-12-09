@@ -5,59 +5,50 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.projectile.ArrowEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import ph.mcmod.bow_api.Serialization.FBiConsumer;
+import ph.mcmod.bow_api.Serialization.FConsumer;
 import ph.mcmod.bow_api.mixin.MixinPersistentProjectileEntity;
+import ph.mcmod.bow_api.mixin.PersistentProjectileEntityAccessor;
 
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public class ListenableArrowEntity extends ArrowEntity {
+public abstract class ListenableArrowEntity extends ArrowEntity {
 @FunctionalInterface
 public interface AfterEntityDamage {
 	void accept(EntityHitResult entityHitResult, DamageSource source, float amount, boolean success);
 }
 
 /**
- * 在{@link #tick()}的开头调用
- */
-public final LimitedCollection<Consumer<ListenableArrowEntity>> beforeTick = new LimitedLinkedLit<>();
-/**
- * 在{@link #tick()}的结尾调用
- */
-public final LimitedCollection<Consumer<ListenableArrowEntity>> afterTick = new LimitedLinkedLit<>();
-/**
- * 在{@link #onCollision(HitResult)}的开头调用
- */
-public final LimitedCollection<BiConsumer<ListenableArrowEntity, HitResult>> beforeOnCollision = new LimitedLinkedLit<>();
-/**
- * 在{@link #onCollision(HitResult)}的结尾调用
- */
-public final LimitedCollection<BiConsumer<ListenableArrowEntity, HitResult>> afterOnCollision = new LimitedLinkedLit<>();
-/**
  * 在{@link PersistentProjectileEntity#onEntityHit(EntityHitResult)}里调用{@link Entity#damage(DamageSource, float)}后紧跟着调用
  *
  * @see MixinPersistentProjectileEntity#onDamage(Entity, DamageSource, float, EntityHitResult)
  */
-public final LimitedCollection<AfterEntityDamage> followingDamage = new LimitedLinkedLit<>();
+public final List<AfterEntityDamage> followingDamage = new LinkedList<>();
 /**
  * 在击中方块或伤害实体之前调用<br>
  * 具体来说，是在{@link #onBlockHit(BlockHitResult)}的开头和与{@link #followingDamage}相同的位置调用
  */
-public final LimitedCollection<BiConsumer<ListenableArrowEntity, HitResult>> followingHit = new LimitedLinkedLit<>();
+public final List<BiConsumer<ListenableArrowEntity, HitResult>> followingHit = new LinkedList<>();
 /**
  * 在击中方块或伤害实体之后调用<br>
  * 具体来说，是在{@link #onBlockHit(BlockHitResult)}的末尾和{@link PersistentProjectileEntity#onEntityHit(EntityHitResult)}里调用{@link PersistentProjectileEntity#playSound(SoundEvent, float, float)}后调用
  *
  * @see MixinPersistentProjectileEntity#endIf(EntityHitResult, CallbackInfo)
  */
-public final LimitedCollection<BiConsumer<ListenableArrowEntity, HitResult>> afterHit = new LimitedLinkedLit<>();
+public final List<BiConsumer<ListenableArrowEntity, HitResult>> afterHit = new LinkedList<>();
 
-public ListenableArrowEntity(EntityType<? extends ArrowEntity> entityType, World world) {
+public ListenableArrowEntity(EntityType<? extends ListenableArrowEntity> entityType, World world) {
 	super(entityType, world);
 	followingDamage.add((entityHitResult, source, amount, success) -> {
 		if (success) {
@@ -68,34 +59,15 @@ public ListenableArrowEntity(EntityType<? extends ArrowEntity> entityType, World
 }
 
 @Override
-public void tick() {
-	for (Consumer<ListenableArrowEntity> callback : beforeTick)
-		callback.accept(this);
-	super.tick();
-	for (Consumer<ListenableArrowEntity> callback : afterTick)
-		callback.accept(this);
-}
-
-@Override
-protected void onCollision(HitResult hitResult) {
-	for (BiConsumer<ListenableArrowEntity, HitResult> callback : beforeOnCollision)
-		callback.accept(this, hitResult);
-	super.onCollision(hitResult);
-	for (BiConsumer<ListenableArrowEntity, HitResult> callback : afterOnCollision)
-		callback.accept(this, hitResult);
-}
-
-@Override
-protected void onBlockHit(BlockHitResult blockHitResult) {
+public void onBlockHit(BlockHitResult blockHitResult) {
 	for (BiConsumer<ListenableArrowEntity, HitResult> callback : followingHit)
 		callback.accept(this, blockHitResult);
 	super.onBlockHit(blockHitResult);
 	for (BiConsumer<ListenableArrowEntity, HitResult> callback : afterHit)
 		callback.accept(this, blockHitResult);
 }
-
-@Override
-protected void onEntityHit(EntityHitResult entityHitResult) {
-	super.onEntityHit(entityHitResult);
+public ListenableArrowEntity setDiscard() {
+	((PersistentProjectileEntityAccessor)this).setLife(1200);;
+	return this;
 }
 }
