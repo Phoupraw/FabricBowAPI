@@ -3,6 +3,8 @@ package ph.mcmod.bow_api;
 import net.fabricmc.fabric.api.item.v1.CustomDamageHandler;
 import net.fabricmc.fabric.api.item.v1.EquipmentSlotProvider;
 import net.fabricmc.fabric.api.item.v1.FabricItemSettings;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.item.FoodComponent;
@@ -25,6 +27,7 @@ private double pullSpeed = 1;
 private double velocityAddend = 0;
 private double velocityFactor = 1;
 private boolean arrowUnrecyclable = false;
+private EntityType<?> spawnOnHit = null;
 
 /**
  * 在最初，把箭的伤害（{@link PersistentProjectileEntity#getDamage()}、{@link PersistentProjectileEntity#setDamage(double)}）加上这个
@@ -93,6 +96,11 @@ public BowSettings setArrowUnrecyclable(boolean arrowUnrecyclable) {
 	return this;
 }
 
+public BowSettings setSpawnOnHit(EntityType<?> spawnOnHit) {
+	this.spawnOnHit = spawnOnHit;
+	return this;
+}
+
 public double getDamageAddend() {
 	return damageAddend;
 }
@@ -115,6 +123,10 @@ public double getVelocityFactor() {
 
 public boolean isArrowUnrecyclable() {
 	return arrowUnrecyclable;
+}
+
+public EntityType<?> getSpawnOnHit() {
+	return spawnOnHit;
 }
 
 public BowSettings() {

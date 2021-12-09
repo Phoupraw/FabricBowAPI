@@ -6,6 +6,7 @@ import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.SkeletonEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -23,6 +24,7 @@ import net.minecraft.stat.Stats;
 import net.minecraft.util.Hand;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Overwrite;
 import ph.mcmod.bow_api.mixin.PersistentProjectileEntityAccessor;
 
@@ -34,6 +36,8 @@ protected final double pullSpeed;
 protected final double velocityAddend;
 protected final double velocityFactor;
 protected final boolean arrowUnrecyclable;
+@Nullable
+protected final EntityType<?> spawnOnHit;
 
 public SimpleBowItem(@NotNull BowSettings settings) {
 	super(settings);
@@ -43,6 +47,7 @@ public SimpleBowItem(@NotNull BowSettings settings) {
 	velocityAddend = settings.getVelocityAddend();
 	velocityFactor = settings.getVelocityFactor();
 	arrowUnrecyclable = settings.isArrowUnrecyclable();
+	spawnOnHit = settings.getSpawnOnHit();
 }
 
 @Override
@@ -131,6 +136,10 @@ public boolean isArrowUnrecyclable() {
 	return arrowUnrecyclable;
 }
 
+public @Nullable EntityType<?> getSpawnOnHit() {
+	return spawnOnHit;
+}
+
 /**
  * 计算拉弓进度
  *
@@ -206,8 +215,14 @@ public ItemStack calcArrowStack(ItemStack bowStack, World world, LivingEntity us
  */
 @SuppressWarnings("unused")
 public PersistentProjectileEntity calcArrowEntity(World world, LivingEntity user, ItemStack bowStack, ItemStack arrowStack, double pullProgress) {
-	ArrowItem arrowItem = arrowStack.getItem() instanceof ArrowItem a ? a : (ArrowItem) Items.ARROW;
-	return arrowItem.createArrow(world, arrowStack, user);
+	PersistentProjectileEntity r;
+	if (getSpawnOnHit() != null) {
+		r = new SpawnerArrowEntity(SpawnerArrowEntity.ENTITY_TYPE,world).add(getSpawnOnHit());
+	} else 	{
+		ArrowItem arrowItem = arrowStack.getItem() instanceof ArrowItem a ? a : (ArrowItem) Items.ARROW;
+		r = arrowItem.createArrow(world, arrowStack, user);
+	}
+	return r;
 }
 
 /**
