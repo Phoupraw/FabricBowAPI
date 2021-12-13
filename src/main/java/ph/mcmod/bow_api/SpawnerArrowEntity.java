@@ -20,13 +20,19 @@ public static final String KEY = "entities";
 public final List<EntityType<?>> entities = new LinkedList<>();
 
 public SpawnerArrowEntity(World world) {
-	this(ENTITY_TYPE,world);
+	this(ENTITY_TYPE, world);
 }
+
 protected SpawnerArrowEntity(EntityType<? extends SpawnerArrowEntity> entityType, World world) {
 	super(entityType, world);
-	followingHit.add((this0, hitResult) -> {
-		for (var type : entities)
-			this0.world.spawnEntity(type.create(this0.world));
+	afterHit.add((this0, hitResult) -> {
+		var this1 = (SpawnerArrowEntity) this0;
+		for (var type : this1.entities) {
+			var entity = type.create(this1.world);
+			Objects.requireNonNull(entity, "var entity = type.create(this1.world)").setPosition(hitResult.getPos());
+			this1.world.spawnEntity(entity);
+
+		}
 	});
 }
 

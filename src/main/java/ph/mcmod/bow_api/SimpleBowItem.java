@@ -4,7 +4,6 @@ import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.SkeletonEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -20,10 +19,18 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
 import net.minecraft.util.Hand;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import ph.mcmod.bow_api.BowSettings.FinallyModify;
+import ph.mcmod.bow_api.Serialization.SBiConsumer;
 import ph.mcmod.bow_api.mixin.PersistentProjectileEntityAccessor;
+
+import java.io.Serializable;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 
 public class SimpleBowItem extends BowItem implements RenderedAsBow, CalcPullProgress {
@@ -33,8 +40,10 @@ protected final double pullSpeed;
 protected final double velocityAddend;
 protected final double velocityFactor;
 protected final boolean arrowDiscard;
-@Nullable
-protected final EntityType<?> spawnOnHit;
+//protected final Function<World, Entity> spawnOnHit;
+protected final List<SBiConsumer<Projectile, HitResult>> afterHits = new LinkedList<>();
+protected final List<Projectile.AfterDamage> afterDamages = new LinkedList<>();
+protected final List<FinallyModify> finallyModifies = new LinkedList<>();
 
 public SimpleBowItem(@NotNull BowSettings settings) {
 	super(settings);
@@ -44,7 +53,10 @@ public SimpleBowItem(@NotNull BowSettings settings) {
 	velocityAddend = settings.getVelocityAddend();
 	velocityFactor = settings.getVelocityFactor();
 	arrowDiscard = settings.isArrowDiscard();
-	spawnOnHit = settings.getSpawnOnHit();
+//	spawnOnHit = settings.getSpawnOnHit();
+	afterHits.addAll(settings.getAfterHits());
+	afterDamages.addAll(settings.getAfterDamages());
+	finallyModifies.addAll(settings.getFinallyModifies());
 }
 
 @Override
@@ -64,6 +76,7 @@ public void onStoppedUsing(@NotNull ItemStack bowStack, @NotNull World world, @N
 	arrowEntity.setProperties(user, user.getPitch(), user.getYaw(), 0.0F, (float) (pullProgress * 3), 1);
 	arrowEntity.setDamage(arrowEntity.getDamage() + getDamageAddend());
 	arrowEntity.setVelocity(arrowEntity.getVelocity().add(arrowEntity.getVelocity().normalize().multiply(pullProgress * getVelocityAddend())));
+	((ProgressPulled)arrowEntity).setPullProgress(pullProgress);
 	if (pullProgress >= 1)
 		arrowEntity.setCritical(true);
 	int power = EnchantmentHelper.getLevel(Enchantments.POWER, bowStack);
@@ -89,7 +102,7 @@ public void onStoppedUsing(@NotNull ItemStack bowStack, @NotNull World world, @N
 	arrowEntity.setVelocity(arrowEntity.getVelocity().multiply(getVelocityFactor()));
 	if (isArrowDiscard())
 		((PersistentProjectileEntityAccessor) arrowEntity).setLife(1200);
-	world.spawnEntity(arrowEntity);
+	world.spawnEntity(finallyModify(world, user, bowStack, arrowStack, pullProgress, arrowEntity));
 	playSoundOnShoot(world, user, bowStack, arrowStack, arrowEntity, pullProgress);
 }
 
@@ -135,9 +148,9 @@ public boolean isArrowDiscard() {
 	return arrowDiscard;
 }
 
-public @Nullable EntityType<?> getSpawnOnHit() {
-	return spawnOnHit;
-}
+//public Function<World, Entity> getSpawnOnHit() {
+//	return spawnOnHit;
+//}
 
 /**
  * 计算拉弓进度
@@ -214,15 +227,27 @@ public ItemStack calcArrowStack(ItemStack bowStack, World world, LivingEntity us
  */
 @SuppressWarnings("unused")
 public PersistentProjectileEntity calcArrowEntity(World world, LivingEntity user, ItemStack bowStack, ItemStack arrowStack, double pullProgress) {
-	PersistentProjectileEntity r;
-	if (getSpawnOnHit() != null) {
-		ArrowEntity arrowEntity = new SpawnerArrowEntity(world).add(getSpawnOnHit()).setDiscard();
-		arrowEntity.initFromStack(arrowStack);
-		r = arrowEntity;
-	} else {
-		ArrowItem arrowItem = arrowStack.getItem() instanceof ArrowItem a ? a : (ArrowItem) Items.ARROW;
-		r = arrowItem.createArrow(world, arrowStack, user);
-	}
+	ArrowItem arrowItem = arrowStack.getItem() instanceof ArrowItem a ? a : (ArrowItem) Items.ARROW;
+	PersistentProjectileEntity r = arrowItem.createArrow(world, arrowStack, user);
+	Projectile p = (Projectile) r;
+//	if (getSpawnOnHit() != null) {
+//		p.addAfterHit((projectile, hitResult) -> {
+//			var a = (PersistentProjectileEntity)projectile;
+//			var e = getSpawnOnHit().apply(a.world);
+//			e.setPosition(a.getPos().add(hitResult.getPos()).multiply(0.5));
+//			a.world.spawnEntity(e);
+//			a.discard();
+//		});
+//	}
+	afterHits.forEach(p::addAfterHit);
+	afterDamages.forEach(p::addAfterDamage);
+	return r;
+}
+
+public Entity finallyModify(World world, LivingEntity user, ItemStack bowStack, ItemStack arrowStack, double pullProgress, PersistentProjectileEntity projectile) {
+	Entity r = projectile;
+	for (FinallyModify callback : finallyModifies)
+		r = callback.finallyModify(world, user, bowStack, arrowStack, pullProgress, projectile);
 	return r;
 }
 

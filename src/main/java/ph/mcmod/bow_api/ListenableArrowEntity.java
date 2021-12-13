@@ -11,19 +11,15 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.world.World;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import ph.mcmod.bow_api.Serialization.FBiConsumer;
-import ph.mcmod.bow_api.Serialization.FConsumer;
 import ph.mcmod.bow_api.mixin.MixinPersistentProjectileEntity;
-import ph.mcmod.bow_api.mixin.PersistentProjectileEntityAccessor;
 
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
-public abstract class ListenableArrowEntity extends ArrowEntity {
+@Deprecated
+public abstract class ListenableArrowEntity extends ArrowEntity implements Cloneable {
+
 @FunctionalInterface
 public interface AfterEntityDamage {
 	void accept(EntityHitResult entityHitResult, DamageSource source, float amount, boolean success);
@@ -39,35 +35,71 @@ public final List<AfterEntityDamage> followingDamage = new LinkedList<>();
  * 在击中方块或伤害实体之前调用<br>
  * 具体来说，是在{@link #onBlockHit(BlockHitResult)}的开头和与{@link #followingDamage}相同的位置调用
  */
-public final List<BiConsumer<ListenableArrowEntity, HitResult>> followingHit = new LinkedList<>();
+public final List<BiConsumer<? super ListenableArrowEntity,? super HitResult>> followingHit = new LinkedList<>();
 /**
  * 在击中方块或伤害实体之后调用<br>
  * 具体来说，是在{@link #onBlockHit(BlockHitResult)}的末尾和{@link PersistentProjectileEntity#onEntityHit(EntityHitResult)}里调用{@link PersistentProjectileEntity#playSound(SoundEvent, float, float)}后调用
  *
- * @see MixinPersistentProjectileEntity#endIf(EntityHitResult, CallbackInfo)
  */
-public final List<BiConsumer<ListenableArrowEntity, HitResult>> afterHit = new LinkedList<>();
+public final List<BiConsumer<? super ListenableArrowEntity,? super  HitResult>> afterHit = new LinkedList<>();
 
+public static final String KEY_DISCARD = "discardAfterHit";
+private boolean discardAfterHit;
 public ListenableArrowEntity(EntityType<? extends ListenableArrowEntity> entityType, World world) {
 	super(entityType, world);
 	followingDamage.add((entityHitResult, source, amount, success) -> {
 		if (success) {
-			for (BiConsumer<ListenableArrowEntity, HitResult> callback : followingHit)
+			for (var callback : followingHit)
 				callback.accept(this, entityHitResult);
+		}
+	});
+	afterHit.add((arrowEntity, hitResult) -> {
+		if (arrowEntity.isDiscardAfterHit()) {
+			arrowEntity.discard();
 		}
 	});
 }
 
 @Override
 public void onBlockHit(BlockHitResult blockHitResult) {
-	for (BiConsumer<ListenableArrowEntity, HitResult> callback : followingHit)
+	for (var callback : followingHit)
 		callback.accept(this, blockHitResult);
 	super.onBlockHit(blockHitResult);
-	for (BiConsumer<ListenableArrowEntity, HitResult> callback : afterHit)
+	for (var callback : afterHit)
 		callback.accept(this, blockHitResult);
 }
-public ListenableArrowEntity setDiscard() {
-	((PersistentProjectileEntityAccessor)this).setLife(1200);;
+
+@Override
+public void writeCustomDataToNbt(NbtCompound nbt) {
+	super.writeCustomDataToNbt(nbt);
+	nbt.putBoolean(KEY_DISCARD,isDiscardAfterHit());
+}
+
+@Override
+public void readCustomDataFromNbt(NbtCompound nbt) {
+	super.readCustomDataFromNbt(nbt);
+	setDiscardAfterHit(nbt.getBoolean(KEY_DISCARD));
+}
+public ListenableArrowEntity setDiscardAfterHit() {
+	return setDiscardAfterHit(true);
+}
+public ListenableArrowEntity setDiscardAfterHit(boolean discardAfterHit) {
+	this.discardAfterHit = discardAfterHit;
 	return this;
+}
+
+public boolean isDiscardAfterHit() {
+	return discardAfterHit;
+}
+@Override
+protected ListenableArrowEntity clone() {
+
+	try {
+		ListenableArrowEntity clone = (ListenableArrowEntity) super.clone();
+		discard();
+		return clone;
+	} catch (CloneNotSupportedException e) {
+		throw new AssertionError(e);
+	}
 }
 }

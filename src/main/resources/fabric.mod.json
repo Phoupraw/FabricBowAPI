@@ -16,10 +16,10 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "ph.mcmod.bow_api.Main::init"
+      "ph.mcmod.bow_api.Main"
     ],
     "client": [
-      "ph.mcmod.bow_api.ClientMain::init"
+      "ph.mcmod.bow_api.ClientMain"
     ]
   },
   "mixins": [

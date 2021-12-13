@@ -59,7 +59,7 @@ interface FBiFunction<T, U, R> extends BiFunction<T, U, R>, Serialization {
 
 interface FConsumer<T> extends Consumer<T>, Serialization {}
 
-interface FBiConsumer<T, U> extends BiConsumer<T, U>, Serialization {
+interface SBiConsumer<T, U> extends BiConsumer<T, U>, Serialization {
 
 }
 }

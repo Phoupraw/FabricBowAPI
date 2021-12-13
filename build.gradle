@@ -45,7 +45,7 @@ dependencies {
 
 //	modImplementation("net.devtech:arrp:0.4.4")
     // I never break backwards compatibility, so just fetching the latest version should be fine
-    modImplementation("net.devtech:arrp:0.+")
+    modImplementation("net.devtech:arrp:0.5.4")
     modImplementation "com.terraformersmc:modmenu:2.0.4"
 
 //	modImplementation include("io.github.cottonmc:LibGui:4.1.7+1.17.1")
